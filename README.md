@@ -1,6 +1,6 @@
 # DongHaHa Games 🎮
 
-> 董子硕的网页游戏小站 · [donghaha.online](https://donghaha.online)
+> donghaha的网页游戏小站 · [donghaha.online](https://donghaha.online)
 
 ## 游戏列表
 
