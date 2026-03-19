@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>军旗 — DongHaHa Games</title>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--surface:#13131a;--surface2:#1c1c26;--accent:#f0e040;--text:#f0ede8;--muted:#6b6880;--border:rgba(240,224,64,0.15);--red:#ff4444;--blue:#4488ff}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans SC',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(rgba(240,224,64,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(240,224,64,0.03) 1px,transparent 1px);background-size:60px 60px}
+nav{width:100%;max-width:700px;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1}
+.back{text-decoration:none;color:var(--muted);font-size:13px;transition:color 0.2s}
+.back:hover{color:var(--accent)}
+.nav-title{font-family:'Dela Gothic One',sans-serif;font-size:1.1rem;color:var(--accent)}
+.wrap{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:12px;padding:0 12px 40px}
+.mode-row{display:flex;gap:8px}
+.mode-btn{padding:6px 18px;font-size:12px;border-radius:999px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all 0.2s;font-family:'Noto Sans SC',sans-serif}
+.mode-btn.active{background:var(--accent);color:#000;border-color:var(--accent)}
+.info-bar{display:flex;align-items:center;gap:20px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 24px}
+.turn-box{font-size:14px;font-weight:500;min-width:160px;text-align:center}
+.red-text{color:var(--red)}.blue-text{color:var(--blue)}
+.board-wrap{background:#1a1208;border:2px solid var(--border);border-radius:12px;padding:8px}
+.board{display:grid;grid-template-columns:repeat(5,64px);grid-template-rows:repeat(13,48px);gap:2px}
+.cell{width:64px;height:48px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.15s;user-select:none;border:1px solid rgba(255,255,255,0.06)}
+.cell.empty{background:rgba(255,255,255,0.03)}.cell.empty:hover{background:rgba(255,255,255,0.08)}
+.cell.railway{background:rgba(100,80,20,0.3);border-color:rgba(180,140,50,0.2)}
+.cell.camp{background:rgba(40,100,40,0.25);border-color:rgba(60,160,60,0.2)}
+.cell.hq{background:rgba(80,20,20,0.35);border-color:rgba(200,50,50,0.25)}
+.piece{width:56px;height:42px;border-radius:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;font-size:12px;font-weight:700;letter-spacing:0.05em;transition:all 0.15s;border:2px solid transparent}
+.piece.red-piece{background:linear-gradient(135deg,#3a0808,#600);color:#ffa0a0;border-color:#800}
+.piece.blue-piece{background:linear-gradient(135deg,#080838,#006);color:#a0c0ff;border-color:#008}
+.piece.selected{box-shadow:0 0 0 2px var(--accent);border-color:var(--accent);transform:scale(1.05)}
+.piece.hidden{font-size:0}.piece.hidden::after{content:'?';font-size:14px;font-weight:700}
+.piece.red-piece.hidden::after{color:#ffa0a0}.piece.blue-piece.hidden::after{color:#a0c0ff}
+.piece-rank{font-size:9px;opacity:0.7;margin-top:1px}
+.highlight{box-shadow:inset 0 0 0 2px rgba(240,224,64,0.6)!important}
+.movable{box-shadow:inset 0 0 0 2px rgba(100,220,100,0.5)!important}
+.msg{font-size:13px;color:var(--muted);min-height:20px;text-align:center}
+.btn-row{display:flex;gap:10px}
+.btn{padding:8px 18px;font-size:13px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;font-family:'Noto Sans SC',sans-serif;transition:all 0.2s}
+.btn:hover{background:var(--surface);border-color:var(--accent)}
+.rank-legend{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;max-width:420px;width:100%}
+.rank-item{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:4px 6px;text-align:center;font-size:10px}
+.rank-name{color:var(--text);font-weight:700}.rank-desc{color:var(--muted);margin-top:1px}
+.river{grid-column:1/-1;height:6px;background:rgba(50,100,200,0.2);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px;color:rgba(100,150,255,0.5);letter-spacing:0.2em}
+</style>
+</head>
+<body>
+<nav>
+  <a class="back" href="../index.html">← 返回首页</a>
+  <div class="nav-title">军旗</div>
+  <div style="width:60px"></div>
+</nav>
+<div class="wrap">
+  <div class="mode-row">
+    <button class="mode-btn active" onclick="setMode('ai')" id="btn-ai">人机对战</button>
+    <button class="mode-btn" onclick="setMode('pvp')" id="btn-pvp">双人对战</button>
+  </div>
+  <div class="info-bar">
+    <div class="turn-box red-text" id="turn-display">🔴 红方回合</div>
+    <div id="cap-display" style="font-size:12px;color:var(--muted)">点击棋子开始</div>
+  </div>
+  <div class="board-wrap"><div class="board" id="board"></div></div>
+  <div class="msg" id="msg"></div>
+  <div class="btn-row">
+    <button class="btn" onclick="initGame()">重新开始</button>
+    <button class="btn" onclick="toggleReveal()">显示/隐藏</button>
+  </div>
+  <div class="rank-legend" id="legend"></div>
+</div>
+<script>
+const PIECES_DEF=[
+  {name:'司令',rank:10,count:1,desc:'最强'},
+  {name:'军长',rank:9,count:1,desc:'次于司令'},
+  {name:'师长',rank:8,count:1,desc:''},
+  {name:'旅长',rank:7,count:1,desc:''},
+  {name:'团长',rank:6,count:1,desc:''},
+  {name:'营长',rank:5,count:1,desc:''},
+  {name:'连长',rank:4,count:1,desc:''},
+  {name:'排长',rank:3,count:1,desc:''},
+  {name:'工兵',rank:2,count:3,desc:'可排雷'},
+  {name:'炸弹',rank:11,count:2,desc:'同归于尽'},
+  {name:'地雷',rank:0,count:3,desc:'除工兵全灭'},
+  {name:'军旗',rank:-1,count:1,desc:'被夺则败'},
+];
+const ROWS=13,COLS=5;
+const CAMPS=new Set(['1,1','1,3','2,0','2,2','2,4','3,1','3,3','10,1','10,3','9,0','9,2','9,4','11,1','11,3']);
+const RAILWAYS_ROW=new Set([2,3,4,8,9,10]);
+const RAILWAY_COL=new Set([0,4]);
+const HQ_RED=new Set(['12,1','12,3']);
+const HQ_BLUE=new Set(['0,1','0,3']);
+let boardState=[],selected=null,gameOver=false,turn=1,mode='ai',revealed=false;
+
+function cellType(r,c){
+  if(HQ_RED.has(r+','+c)||HQ_BLUE.has(r+','+c))return'hq';
+  if(CAMPS.has(r+','+c))return'camp';
+  if(RAILWAYS_ROW.has(r)||RAILWAY_COL.has(c))return'railway';
+  return'empty';
+}
+function createPieces(side){
+  const p=[];
+  for(const d of PIECES_DEF)for(let i=0;i<d.count;i++)p.push({name:d.name,rank:d.rank,side,id:side+'-'+d.name+i});
+  return p;
+}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+function initGame(){
+  boardState=Array.from({length:ROWS},()=>Array(COLS).fill(null));
+  const rp=shuffle(createPieces(1));
+  const rpos=[];
+  for(let r=7;r<ROWS;r++)for(let c=0;c<COLS;c++)if(!HQ_RED.has(r+','+c))rpos.push([r,c]);
+  const rflag=rp.find(p=>p.name==='军旗'),roth=rp.filter(p=>p.name!=='军旗');
+  const rhq=shuffle([[12,1],[12,3]]);boardState[rhq[0][0]][rhq[0][1]]=rflag;
+  shuffle(rpos);let pi=0;
+  for(const p of roth){while(HQ_RED.has(rpos[pi][0]+','+rpos[pi][1]))pi++;boardState[rpos[pi][0]][rpos[pi][1]]=p;pi++;}
+  const bp=shuffle(createPieces(2));
+  const bpos=[];
+  for(let r=0;r<6;r++)for(let c=0;c<COLS;c++)if(!HQ_BLUE.has(r+','+c))bpos.push([r,c]);
+  const bflag=bp.find(p=>p.name==='军旗'),both=bp.filter(p=>p.name!=='军旗');
+  const bhq=shuffle([[0,1],[0,3]]);boardState[bhq[0][0]][bhq[0][1]]=bflag;
+  shuffle(bpos);let bpi=0;
+  for(const p of both){while(HQ_BLUE.has(bpos[bpi][0]+','+bpos[bpi][1]))bpi++;boardState[bpos[bpi][0]][bpos[bpi][1]]=p;bpi++;}
+  selected=null;gameOver=false;turn=1;
+  document.getElementById('turn-display').innerHTML='🔴 红方回合';
+  document.getElementById('turn-display').className='turn-box red-text';
+  document.getElementById('msg').textContent='';
+  render();
+}
+
+function getMovable(r,c){
+  const p=boardState[r][c];
+  if(!p||p.name==='地雷'||p.name==='军旗')return[];
+  const moves=[],dirs=[[-1,0],[1,0],[0,-1],[0,1]];
+  for(const[dr,dc]of dirs){
+    const nr=r+dr,nc=c+dc;
+    if(nr<0||nr>=ROWS||nc<0||nc>=COLS)continue;
+    if(p.side===1&&HQ_RED.has(nr+','+nc))continue;
+    if(p.side===2&&HQ_BLUE.has(nr+','+nc))continue;
+    const t=boardState[nr][nc];
+    if(!t||t.side!==p.side)moves.push([nr,nc]);
+    if(RAILWAYS_ROW.has(r)&&dr===0||RAILWAY_COL.has(c)&&dc===0){
+      let lr=nr,lc=nc;
+      while(true){
+        const nnr=lr+dr,nnc=lc+dc;
+        if(nnr<0||nnr>=ROWS||nnc<0||nnc>=COLS)break;
+        if(boardState[lr][lc])break;
+        const tt=boardState[nnr][nnc];
+        if(!tt||tt.side!==p.side)moves.push([nnr,nnc]);
+        lr=nnr;lc=nnc;
+      }
+    }
+  }
+  return moves;
+}
+
+function battle(a,d){
+  if(a.name==='炸弹'||d.name==='炸弹')return'both';
+  if(d.name==='地雷')return a.name==='工兵'?'atk':'def';
+  if(d.name==='军旗')return'atk';
+  if(a.rank>d.rank)return'atk';
+  if(a.rank<d.rank)return'def';
+  return'both';
+}
+
+function doMove(fr,fc,tr,tc){
+  const p=boardState[fr][fc],t=boardState[tr][tc];
+  if(t){
+    const res=battle(p,t);
+    if(res==='atk'){boardState[tr][tc]=p;boardState[fr][fc]=null;}
+    else if(res==='def'){boardState[fr][fc]=null;}
+    else{boardState[tr][tc]=null;boardState[fr][fc]=null;}
+    if(t.name==='军旗'){gameOver=true;const w=p.side===1?'红方':'蓝方';document.getElementById('msg').textContent='🎉 '+w+'夺旗获胜！';}
+    document.getElementById('cap-display').textContent=p.name+' vs '+t.name+' → '+(res==='atk'?'攻方胜':res==='def'?'守方胜':'同归于尽');
+  }else{boardState[tr][tc]=p;boardState[fr][fc]=null;document.getElementById('cap-display').textContent='';}
+  turn=turn===1?2:1;
+  const isRed=turn===1;
+  document.getElementById('turn-display').innerHTML=isRed?'🔴 红方回合':'🔵 蓝方回合';
+  document.getElementById('turn-display').className='turn-box '+(isRed?'red-text':'blue-text');
+  selected=null;render();
+  if(!gameOver&&mode==='ai'&&turn===2)setTimeout(aiTurn,600);
+}
+
+function aiTurn(){
+  let best=null,bs=-1;
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+    const p=boardState[r][c];if(!p||p.side!==2)continue;
+    for(const[nr,nc]of getMovable(r,c)){
+      let s=Math.random()*3;
+      const t=boardState[nr][nc];
+      if(t){if(t.name==='军旗')s+=1000;else if(t.rank>=0){const res=battle(p,t);if(res==='atk')s+=t.rank*10+20;else if(res==='both')s+=5;}}
+      s+=(ROWS-1-nr)*0.5;
+      if(s>bs){bs=s;best={fr:r,fc:c,tr:nr,tc:nc};}
+    }
+  }
+  if(best)doMove(best.fr,best.fc,best.tr,best.tc);
+}
+
+function toggleReveal(){revealed=!revealed;render();}
+
+function render(){
+  const el=document.getElementById('board');el.innerHTML='';
+  for(let r=0;r<ROWS;r++){
+    if(r===6){const rv=document.createElement('div');rv.className='river';rv.style.gridColumn='1/-1';rv.textContent='— — 楚 河 · 汉 界 — —';el.appendChild(rv);continue;}
+    for(let c=0;c<COLS;c++){
+      const cell=document.createElement('div');cell.className='cell '+cellType(r,c);
+      if(selected&&selected[0]===r&&selected[1]===c)cell.classList.add('highlight');
+      if(selected){const mv=getMovable(selected[0],selected[1]);if(mv.some(([mr,mc])=>mr===r&&mc===c))cell.classList.add('movable');}
+      const piece=boardState[r][c];
+      if(piece){
+        const pe=document.createElement('div');
+        pe.className='piece '+(piece.side===1?'red-piece':'blue-piece');
+        const show=revealed||(mode==='ai'?piece.side===1:true);
+        if(!show)pe.classList.add('hidden');
+        else{pe.textContent=piece.name;const re=document.createElement('div');re.className='piece-rank';if(piece.name!=='军旗'&&piece.name!=='地雷'&&piece.name!=='炸弹')re.textContent='★'.repeat(Math.min(piece.rank,5));pe.appendChild(re);}
+        if(selected&&selected[0]===r&&selected[1]===c)pe.classList.add('selected');
+        cell.appendChild(pe);
+      }
+      cell.addEventListener('click',()=>handleClick(r,c));
+      el.appendChild(cell);
+    }
+  }
+  const lg=document.getElementById('legend');lg.innerHTML='';
+  for(const d of PIECES_DEF){const it=document.createElement('div');it.className='rank-item';it.innerHTML='<div class="rank-name">'+d.name+'</div><div class="rank-desc">'+(d.rank===-1?'被夺则败':d.rank===0?'除工兵':d.rank===11?'同归于尽':'等级'+d.rank)+'</div>';lg.appendChild(it);}
+}
+
+function handleClick(r,c){
+  if(gameOver)return;
+  const piece=boardState[r][c];
+  if(selected){
+    const[sr,sc]=selected;
+    if(sr===r&&sc===c){selected=null;render();return;}
+    const mv=getMovable(sr,sc);
+    if(mv.some(([mr,mc])=>mr===r&&mc===c)){doMove(sr,sc,r,c);return;}
+  }
+  if(piece&&piece.side===turn){
+    if(mode==='ai'&&piece.side===2)return;
+    selected=[r,c];render();
+  }
+}
+function setMode(m){mode=m;document.getElementById('btn-ai').classList.toggle('active',m==='ai');document.getElementById('btn-pvp').classList.toggle('active',m==='pvp');initGame();}
+initGame();
+</script>
+</body>
+</html>
