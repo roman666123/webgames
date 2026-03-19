@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>五子棋 — DongHaHa Games</title>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Noto+Sans+SC:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--surface:#13131a;--surface2:#1c1c26;--accent:#f0e040;--accent2:#ff6b35;--text:#f0ede8;--muted:#6b6880;--border:rgba(240,224,64,0.15)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans SC',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(rgba(240,224,64,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(240,224,64,0.03) 1px,transparent 1px);background-size:60px 60px}
+nav{width:100%;max-width:900px;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1}
+.back{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--muted);font-size:13px;letter-spacing:0.05em;transition:color 0.2s}
+.back:hover{color:var(--accent)}
+.nav-title{font-family:'Dela Gothic One',sans-serif;font-size:1.1rem;color:var(--accent)}
+.wrap{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:16px;padding:0 16px 40px}
+.status-bar{display:flex;align-items:center;gap:20px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 24px}
+.stone{width:16px;height:16px;border-radius:50%;display:inline-block;border:1px solid rgba(255,255,255,0.2)}
+.stone.black{background:radial-gradient(circle at 35% 35%,#555,#000)}
+.stone.white{background:radial-gradient(circle at 35% 35%,#fff,#bbb)}
+.status-text{font-size:14px;font-weight:500}
+.btn-row{display:flex;gap:10px}
+.btn{padding:8px 18px;font-size:13px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;transition:background 0.2s,border-color 0.2s;font-family:'Noto Sans SC',sans-serif}
+.btn:hover{background:var(--surface);border-color:rgba(240,224,64,0.4)}
+canvas{display:block;cursor:crosshair;border-radius:12px;border:1px solid var(--border)}
+.log{font-size:12px;color:var(--muted);height:18px}
+.mode-row{display:flex;gap:8px}
+.mode-btn{padding:6px 16px;font-size:12px;border-radius:999px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all 0.2s;font-family:'Noto Sans SC',sans-serif}
+.mode-btn.active{background:var(--accent);color:#000;border-color:var(--accent)}
+</style>
+</head>
+<body>
+<nav>
+  <a class="back" href="../index.html">← 返回首页</a>
+  <div class="nav-title">五子棋</div>
+  <div style="width:80px"></div>
+</nav>
+<div class="wrap">
+  <div class="mode-row">
+    <button class="mode-btn active" onclick="setMode('ai')" id="btn-ai">人机对战</button>
+    <button class="mode-btn" onclick="setMode('pvp')" id="btn-pvp">双人对战</button>
+  </div>
+  <div class="status-bar">
+    <span class="stone black" id="s-black"></span>
+    <span class="status-text" id="status">你先走 — 黑棋</span>
+    <span class="stone white" id="s-white"></span>
+  </div>
+  <canvas id="cv"></canvas>
+  <div class="btn-row">
+    <button class="btn" onclick="resetGame()">重新开始</button>
+    <button class="btn" onclick="undoMove()">悔棋</button>
+  </div>
+  <div class="log" id="log"></div>
+</div>
+<script>
+const N=15,CELL=36,PAD=28,W=PAD*2+(N-1)*CELL;
+const cv=document.getElementById('cv');
+const ctx=cv.getContext('2d');
+cv.width=W;cv.height=W;
+let board,history,gameOver,playerTurn,mode='ai';
+
+function setMode(m){
+  mode=m;
+  document.getElementById('btn-ai').classList.toggle('active',m==='ai');
+  document.getElementById('btn-pvp').classList.toggle('active',m==='pvp');
+  resetGame();
+}
+
+function resetGame(){
+  board=Array.from({length:N},()=>Array(N).fill(0));
+  history=[];gameOver=false;playerTurn=true;
+  const t=mode==='pvp'?'双人模式 — 黑棋先走':'你先走 — 黑棋';
+  setStatus(t);setLog('');draw();
+}
+function setStatus(t){document.getElementById('status').textContent=t}
+function setLog(t){document.getElementById('log').textContent=t}
+
+function draw(){
+  const isDark=true;
+  ctx.fillStyle='#c8a84b';ctx.fillRect(0,0,W,W);
+  ctx.strokeStyle='#8b6914';ctx.lineWidth=0.8;
+  for(let i=0;i<N;i++){
+    ctx.beginPath();ctx.moveTo(PAD+i*CELL,PAD);ctx.lineTo(PAD+i*CELL,PAD+(N-1)*CELL);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(PAD,PAD+i*CELL);ctx.lineTo(PAD+(N-1)*CELL,PAD+i*CELL);ctx.stroke();
+  }
+  [[3,3],[3,11],[7,7],[11,3],[11,11]].forEach(([r,c])=>{
+    ctx.fillStyle='#6b4f0a';ctx.beginPath();ctx.arc(PAD+c*CELL,PAD+r*CELL,3.5,0,Math.PI*2);ctx.fill();
+  });
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){
+    if(!board[r][c])continue;
+    const x=PAD+c*CELL,y=PAD+r*CELL,bl=board[r][c]===1;
+    const g=ctx.createRadialGradient(x-3,y-3,2,x,y,CELL*0.45);
+    g.addColorStop(0,bl?'#555':'#fff');g.addColorStop(1,bl?'#000':'#bbb');
+    ctx.beginPath();ctx.arc(x,y,CELL*0.44,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();
+    ctx.strokeStyle=bl?'#111':'#888';ctx.lineWidth=0.5;ctx.stroke();
+  }
+  if(history.length){
+    const l=history[history.length-1];
+    ctx.strokeStyle=l.who===1?'#f00':'#00f';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.arc(PAD+l.c*CELL,PAD+l.r*CELL,5,0,Math.PI*2);ctx.stroke();
+  }
+}
+
+function checkWin(r,c,who){
+  const dirs=[[0,1],[1,0],[1,1],[1,-1]];
+  for(const [dr,dc] of dirs){
+    let cnt=1;
+    for(let d=1;d<5;d++){const nr=r+dr*d,nc=c+dc*d;if(nr<0||nr>=N||nc<0||nc>=N||board[nr][nc]!==who)break;cnt++;}
+    for(let d=1;d<5;d++){const nr=r-dr*d,nc=c-dc*d;if(nr<0||nr>=N||nc<0||nc>=N||board[nr][nc]!==who)break;cnt++;}
+    if(cnt>=5)return true;
+  }
+  return false;
+}
+
+function place(r,c,who){
+  board[r][c]=who;history.push({r,c,who});draw();
+  if(checkWin(r,c,who)){
+    gameOver=true;
+    if(mode==='pvp')setStatus(who===1?'黑棋获胜！':'白棋获胜！');
+    else setStatus(who===1?'你赢了！🎉':'我赢了！');
+    return true;
+  }
+  if(history.length===N*N){setStatus('平局！');gameOver=true;return true;}
+  return false;
+}
+
+function score(r,c,who){
+  const dirs=[[0,1],[1,0],[1,1],[1,-1]];let best=0;
+  for(const [dr,dc] of dirs){
+    let cnt=1,open=0;
+    for(let d=1;d<5;d++){const nr=r+dr*d,nc=c+dc*d;if(nr<0||nr>=N||nc<0||nc>=N)break;if(board[nr][nc]===who)cnt++;else{if(!board[nr][nc])open++;break;}}
+    for(let d=1;d<5;d++){const nr=r-dr*d,nc=c-dc*d;if(nr<0||nr>=N||nc<0||nc>=N)break;if(board[nr][nc]===who)cnt++;else{if(!board[nr][nc])open++;break;}}
+    const s=cnt>=5?1e7:cnt===4?open?9000:800:cnt===3?open?500:50:cnt===2?30:1;
+    best=Math.max(best,s);
+  }
+  return best;
+}
+
+function aiMove(){
+  setStatus('思考中...');
+  setTimeout(()=>{
+    let best=-1,br=-1,bc=-1;
+    const cands=[];
+    for(let r=0;r<N;r++)for(let c=0;c<N;c++){
+      if(board[r][c])continue;
+      let near=false;
+      for(let dr=-2;dr<=2&&!near;dr++)for(let dc=-2;dc<=2&&!near;dc++){const nr=r+dr,nc=c+dc;if(nr>=0&&nr<N&&nc>=0&&nc<N&&board[nr][nc])near=true;}
+      if(near)cands.push([r,c]);
+    }
+    if(!cands.length)cands.push([7,7]);
+    if(!history.length){place(7,7,2);playerTurn=true;setStatus('轮到你了 — 黑棋');return;}
+    for(const [r,c] of cands){
+      const s=Math.max(score(r,c,2),score(r,c,1)*0.95);
+      if(s>best){best=s;br=r;bc=c;}
+    }
+    const done=place(br,bc,2);
+    if(!done){playerTurn=true;setStatus('轮到你了 — 黑棋');}
+    setLog(`AI落子：第${br+1}行 第${bc+1}列`);
+  },300);
+}
+
+function undoMove(){
+  if(mode==='ai'){
+    if(history.length>=2){history.pop();history.pop();}
+    else if(history.length===1)history.pop();
+    else return;
+  } else {
+    if(!history.length)return;
+    history.pop();
+    playerTurn=history.length%2===0;
+  }
+  board=Array.from({length:N},()=>Array(N).fill(0));
+  history.forEach(h=>board[h.r][h.c]=h.who);
+  gameOver=false;
+  if(mode==='ai'){playerTurn=true;setStatus('轮到你了 — 黑棋');}
+  else setStatus(playerTurn?'黑棋走':'白棋走');
+  setLog('已悔棋');draw();
+}
+
+cv.addEventListener('click',e=>{
+  if(gameOver)return;
+  if(mode==='ai'&&!playerTurn)return;
+  const rect=cv.getBoundingClientRect();
+  const scaleX=W/rect.width,scaleY=W/rect.height;
+  const x=(e.clientX-rect.left)*scaleX,y=(e.clientY-rect.top)*scaleY;
+  const c=Math.round((x-PAD)/CELL),r=Math.round((y-PAD)/CELL);
+  if(r<0||r>=N||c<0||c>=N||board[r][c])return;
+  if(mode==='ai'){
+    playerTurn=false;
+    setLog(`你落子：第${r+1}行 第${c+1}列`);
+    const done=place(r,c,1);
+    if(!done)aiMove();
+  } else {
+    const who=playerTurn?1:2;
+    const done=place(r,c,who);
+    if(!done){playerTurn=!playerTurn;setStatus(playerTurn?'黑棋走':'白棋走');}
+  }
+});
+
+resetGame();
+</script>
+</body>
+</html>
