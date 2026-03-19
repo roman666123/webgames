@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>扫雷 — DongHaHa Games</title>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Noto+Sans+SC:wght@400&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--surface:#13131a;--surface2:#1c1c26;--accent:#34d399;--text:#f0ede8;--muted:#6b6880;--border:rgba(52,211,153,0.2)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans SC',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(rgba(52,211,153,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(52,211,153,0.03) 1px,transparent 1px);background-size:60px 60px}
+nav{width:100%;max-width:600px;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1}
+.back{text-decoration:none;color:var(--muted);font-size:13px;transition:color 0.2s}
+.back:hover{color:var(--accent)}
+.nav-title{font-family:'Dela Gothic One',sans-serif;font-size:1.1rem;color:var(--accent)}
+.wrap{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:14px;padding:0 16px 40px}
+.top-row{display:flex;gap:12px;align-items:center}
+.score-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 18px;text-align:center;min-width:80px}
+.score-label{font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted)}
+.score-val{font-family:'Dela Gothic One',sans-serif;font-size:1.3rem;color:var(--accent)}
+.btn{padding:10px 18px;font-size:13px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;font-family:'Noto Sans SC',sans-serif;transition:all 0.2s}
+.btn:hover{background:var(--surface);border-color:var(--accent)}
+.mode-row{display:flex;gap:8px}
+.mode-btn{padding:6px 14px;font-size:12px;border-radius:999px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all 0.2s;font-family:'Noto Sans SC',sans-serif}
+.mode-btn.active{background:var(--accent);color:#000;border-color:var(--accent)}
+.board{display:inline-grid;gap:2px;background:#0d1a14;border-radius:12px;padding:10px;border:1px solid var(--border)}
+.cell{width:28px;height:28px;border-radius:4px;background:var(--surface2);border:1px solid rgba(52,211,153,0.1);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;font-weight:700;transition:background 0.15s;user-select:none}
+.cell:hover:not(.open):not(.boom){background:#1a2e24}
+.cell.open{background:#0d1a14;border-color:rgba(52,211,153,0.05);cursor:default}
+.cell.flag{color:#f472b6}
+.cell.boom{background:#3d0a0a}
+.n1{color:#60a5fa}.n2{color:#34d399}.n3{color:#f87171}.n4{color:#a78bfa}.n5{color:#fb923c}.n6{color:#f472b6}.n7{color:#fbbf24}.n8{color:#f0ede8}
+.msg{font-size:13px;color:var(--muted);min-height:20px}
+</style>
+</head>
+<body>
+<nav>
+  <a class="back" href="../index.html">← 返回</a>
+  <div class="nav-title">扫雷</div>
+  <div style="width:60px"></div>
+</nav>
+<div class="wrap">
+  <div class="mode-row">
+    <button class="mode-btn active" onclick="setMode(9,9,10,'easy')" id="m-easy">简单</button>
+    <button class="mode-btn" onclick="setMode(16,16,40,'med')" id="m-med">中等</button>
+    <button class="mode-btn" onclick="setMode(16,30,99,'hard')" id="m-hard">困难</button>
+  </div>
+  <div class="top-row">
+    <div class="score-box"><div class="score-label">💣 剩余</div><div class="score-val" id="mines">10</div></div>
+    <button class="btn" onclick="reset()">重置</button>
+    <div class="score-box"><div class="score-label">⏱ 时间</div><div class="score-val" id="timer">0</div></div>
+  </div>
+  <div class="board" id="board"></div>
+  <div class="msg" id="msg">左键翻开 · 右键标旗</div>
+</div>
+<script>
+let ROWS=9,COLS=9,MINES=10,board,revealed,flagged,first,over,timerVal,timerInv;
+
+function setMode(r,c,m,id){
+  ROWS=r;COLS=c;MINES=m;
+  ['easy','med','hard'].forEach(x=>document.getElementById('m-'+x).classList.remove('active'));
+  document.getElementById('m-'+id).classList.add('active');
+  reset();
+}
+function reset(){
+  board=Array.from({length:ROWS},()=>Array(COLS).fill(0));
+  revealed=Array.from({length:ROWS},()=>Array(COLS).fill(false));
+  flagged=Array.from({length:ROWS},()=>Array(COLS).fill(false));
+  first=true;over=false;timerVal=0;clearInterval(timerInv);
+  document.getElementById('mines').textContent=MINES;
+  document.getElementById('timer').textContent=0;
+  document.getElementById('msg').textContent='左键翻开 · 右键标旗';
+  render();
+}
+function placeMines(sr,sc){
+  let placed=0;
+  while(placed<MINES){
+    const r=Math.floor(Math.random()*ROWS),c=Math.floor(Math.random()*COLS);
+    if(board[r][c]===-1)continue;
+    if(Math.abs(r-sr)<=1&&Math.abs(c-sc)<=1)continue;
+    board[r][c]=-1;placed++;
+  }
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+    if(board[r][c]===-1)continue;
+    let cnt=0;
+    for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){const nr=r+dr,nc=c+dc;if(nr>=0&&nr<ROWS&&nc>=0&&nc<COLS&&board[nr][nc]===-1)cnt++;}
+    board[r][c]=cnt;
+  }
+}
+function reveal(r,c){
+  if(r<0||r>=ROWS||c<0||c>=COLS||revealed[r][c]||flagged[r][c])return;
+  revealed[r][c]=true;
+  if(board[r][c]===0){for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++)reveal(r+dr,c+dc);}
+}
+function click(r,c){
+  if(over||revealed[r][c]||flagged[r][c])return;
+  if(first){first=false;placeMines(r,c);timerInv=setInterval(()=>{timerVal++;document.getElementById('timer').textContent=timerVal;},1000);}
+  if(board[r][c]===-1){
+    revealed[r][c]=true;over=true;clearInterval(timerInv);
+    for(let i=0;i<ROWS;i++)for(let j=0;j<COLS;j++)if(board[i][j]===-1)revealed[i][j]=true;
+    document.getElementById('msg').textContent='💥 踩雷了！点击重置再试';
+    render();return;
+  }
+  reveal(r,c);
+  const total=ROWS*COLS-MINES;
+  let cnt=0;for(let i=0;i<ROWS;i++)for(let j=0;j<COLS;j++)if(revealed[i][j])cnt++;
+  if(cnt===total){over=true;clearInterval(timerInv);document.getElementById('msg').textContent=`🎉 胜利！用时 ${timerVal} 秒`;}
+  render();
+}
+function rightClick(r,c,e){
+  e.preventDefault();if(over||revealed[r][c])return;
+  flagged[r][c]=!flagged[r][c];
+  const fl=flagged.flat().filter(Boolean).length;
+  document.getElementById('mines').textContent=MINES-fl;
+  render();
+}
+function render(){
+  const el=document.getElementById('board');
+  el.style.gridTemplateColumns=`repeat(${COLS},28px)`;
+  el.innerHTML='';
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+    const d=document.createElement('div');d.className='cell';
+    if(revealed[r][c]){
+      d.classList.add(board[r][c]===-1?'boom':'open');
+      if(board[r][c]===-1)d.textContent='💣';
+      else if(board[r][c]>0){d.textContent=board[r][c];d.classList.add('n'+board[r][c]);}
+    } else if(flagged[r][c]){d.classList.add('flag');d.textContent='🚩';}
+    d.addEventListener('click',()=>click(r,c));
+    d.addEventListener('contextmenu',e=>rightClick(r,c,e));
+    el.appendChild(d);
+  }
+}
+reset();
+</script>
+</body>
+</html>

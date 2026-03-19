@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DongHaHa Games</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0a0f;
+  --surface: #13131a;
+  --surface2: #1c1c26;
+  --accent: #f0e040;
+  --accent2: #ff6b35;
+  --accent3: #4ecdc4;
+  --text: #f0ede8;
+  --muted: #6b6880;
+  --border: rgba(240,224,64,0.15);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Noto Sans SC', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ---- noise overlay ---- */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  background-size: 200px;
+  opacity: 0.4;
+}
+
+/* ---- grid bg ---- */
+body::after {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(240,224,64,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(240,224,64,0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+.container { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+/* ---- HEADER ---- */
+header {
+  padding: 48px 0 32px;
+  border-bottom: 1px solid var(--border);
+  position: relative; z-index: 1;
+}
+.header-inner {
+  display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+}
+.logo {
+  font-family: 'Dela Gothic One', sans-serif;
+  font-size: clamp(2.4rem, 6vw, 4rem);
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--accent);
+  text-shadow: 0 0 60px rgba(240,224,64,0.3);
+}
+.logo span { color: var(--accent2); }
+.tagline {
+  font-size: 13px;
+  color: var(--muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding-bottom: 4px;
+}
+.badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 12px;
+  color: var(--accent3);
+  letter-spacing: 0.06em;
+}
+.badge::before {
+  content: '';
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--accent3);
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.7); }
+}
+
+/* ---- GAME GRID ---- */
+.section { padding: 56px 0; }
+.section-label {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 32px;
+  display: flex; align-items: center; gap: 12px;
+}
+.section-label::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 2px;
+}
+
+.game-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 32px 28px;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.2s, border-color 0.2s;
+}
+.game-card:first-child { border-radius: 12px 0 0 0; }
+.game-card:nth-child(3) { border-radius: 0 12px 0 0; }
+.game-card:nth-child(4) { border-radius: 0 0 0 12px; }
+.game-card:last-child { border-radius: 0 0 12px 0; }
+
+.game-card::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, var(--card-accent, var(--accent)) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.game-card:hover { background: var(--surface2); border-color: rgba(240,224,64,0.35); }
+.game-card:hover::before { opacity: 0.05; }
+
+.card-num {
+  font-family: 'Dela Gothic One', sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  color: var(--muted);
+  margin-bottom: 20px;
+}
+.card-icon {
+  font-size: 40px;
+  line-height: 1;
+  margin-bottom: 16px;
+  display: block;
+}
+.card-title {
+  font-family: 'Dela Gothic One', sans-serif;
+  font-size: 1.5rem;
+  color: var(--text);
+  margin-bottom: 8px;
+  letter-spacing: -0.01em;
+}
+.card-desc {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.7;
+  margin-bottom: 24px;
+}
+.card-tags {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.tag {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  letter-spacing: 0.05em;
+}
+.card-arrow {
+  position: absolute; bottom: 28px; right: 28px;
+  width: 36px; height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  color: var(--accent);
+  transition: transform 0.2s, border-color 0.2s;
+}
+.game-card:hover .card-arrow { transform: translate(3px,-3px); border-color: var(--accent); }
+
+/* card accent colors */
+.card-gomoku { --card-accent: #f0e040; }
+.card-2048   { --card-accent: #ff6b35; }
+.card-snake  { --card-accent: #4ecdc4; }
+.card-memory { --card-accent: #a78bfa; }
+.card-tetris { --card-accent: #f472b6; }
+.card-mine   { --card-accent: #34d399; }
+
+/* ---- FOOTER ---- */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 32px 0;
+  position: relative; z-index: 1;
+}
+.footer-inner {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 12px; color: var(--muted);
+}
+.footer-logo {
+  font-family: 'Dela Gothic One', sans-serif;
+  font-size: 1rem;
+  color: var(--accent);
+}
+
+/* ---- animations ---- */
+.game-card { animation: fadeUp 0.5s both; }
+.game-card:nth-child(1) { animation-delay: 0.05s; }
+.game-card:nth-child(2) { animation-delay: 0.10s; }
+.game-card:nth-child(3) { animation-delay: 0.15s; }
+.game-card:nth-child(4) { animation-delay: 0.20s; }
+.game-card:nth-child(5) { animation-delay: 0.25s; }
+.game-card:nth-child(6) { animation-delay: 0.30s; }
+
+@keyframes fadeUp {
+  from { opacity:0; transform: translateY(24px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="container">
+    <div class="header-inner">
+      <div>
+        <div class="logo">DONG<span>HAHA</span><br>GAMES</div>
+        <div class="tagline">董子硕的游戏小站 · 博弈 / 益智 / 策略</div>
+      </div>
+      <div>
+        <div class="badge">6款游戏 在线畅玩</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="container">
+    <section class="section">
+      <div class="section-label">选择游戏</div>
+      <div class="game-grid">
+
+        <a href="games/gomoku.html" class="game-card card-gomoku">
+          <div class="card-num">01</div>
+          <span class="card-icon">⚫</span>
+          <div class="card-title">五子棋</div>
+          <div class="card-desc">经典黑白博弈，人机对战，先连五子者胜。考验你的战略布局能力。</div>
+          <div class="card-tags">
+            <span class="tag">博弈</span>
+            <span class="tag">人机对战</span>
+            <span class="tag">策略</span>
+          </div>
+          <div class="card-arrow">↗</div>
+        </a>
+
+        <a href="games/2048.html" class="game-card card-2048">
+          <div class="card-num">02</div>
+          <span class="card-icon">🔢</span>
+          <div class="card-title">2048</div>
+          <div class="card-desc">滑动合并数字方块，挑战2048的极限。简单上手，难以放下。</div>
+          <div class="card-tags">
+            <span class="tag">益智</span>
+            <span class="tag">单人</span>
+            <span class="tag">数字</span>
+          </div>
+          <div class="card-arrow">↗</div>
+        </a>
+
+        <a href="games/snake.html" class="game-card card-snake">
+          <div class="card-num">03</div>
+          <span class="card-icon">🐍</span>
+          <div class="card-title">贪吃蛇</div>
+          <div class="card-desc">操控蛇不断吃食物变长，别撞到自己或墙壁，看你能撑多久。</div>
+          <div class="card-tags">
+            <span class="tag">街机</span>
+            <span class="tag">单人</span>
+            <span class="tag">反应</span>
+          </div>
+          <div class="card-arrow">↗</div>
+        </a>
+
+        <a href="games/memory.html" class="game-card card-memory">
+          <div class="card-num">04</div>
+          <span class="card-icon">🃏</span>
+          <div class="card-title">翻牌记忆</div>
+          <div class="card-desc">翻开卡片找到相同的配对，测试你的记忆力，用最少步数通关。</div>
+          <div class="card-tags">
+            <span class="tag">记忆</span>
+            <span class="tag">单人</span>
+            <span class="tag">益智</span>
+          </div>
+          <div class="card-arrow">↗</div>
+        </a>
+
+        <a href="games/tetris.html" class="game-card card-tetris">
+          <div class="card-num">05</div>
+          <span class="card-icon">🧱</span>
+          <div class="card-title">俄罗斯方块</div>
+          <div class="card-desc">经典方块消除，速度越来越快。填满一行消除得分，坚持到底！</div>
+          <div class="card-tags">
+            <span class="tag">街机</span>
+            <span class="tag">单人</span>
+            <span class="tag">经典</span>
+          </div>
+          <div class="card-arrow">↗</div>
+        </a>
+
+        <a href="games/minesweeper.html" class="game-card card-mine">
+          <div class="card-num">06</div>
+          <span class="card-icon">💣</span>
+          <div class="card-title">扫雷</div>
+          <div class="card-desc">根据数字推理地雷位置，标记并安全扫清所有格子，逻辑推理挑战。</div>
+          <div class="card-tags">
+            <span class="tag">逻辑</span>
+            <span class="tag">单人</span>
+            <span class="tag">推理</span>
+          </div>
+          <div class="card-arrow">↗</div>
+        </a>
+
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-logo">DONGHAHA.ONLINE</div>
+      <div>Made with ♥ by 董子硕</div>
+    </div>
+  </div>
+</footer>
+</body>
+</html>
